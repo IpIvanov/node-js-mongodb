@@ -1,9 +1,10 @@
-var express = require('express');
-var app = express();
-var cron = require('node-cron');
-var MongoClient = require('mongodb').MongoClient;
-var puppeteer = require('puppeteer');
-var url = "mongodb://herokuUser:user332211@ds117965.mlab.com:17965/heroku_jj0khzm2";
+const scrape = require('./scripts/scrape');
+const express = require('express');
+const app = express();
+const cron = require('node-cron');
+
+const MongoClient = require('mongodb').MongoClient;
+const url = "mongodb://herokuUser:user332211@ds117965.mlab.com:17965/heroku_jj0khzm2";
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -27,9 +28,9 @@ cron.schedule('* * * * *', function() {
     MongoClient.connect(url, function(err, db) {
       if (err) throw err;
       console.log("Database created!");
-      console.log(res, '--> Scraped text')
+      console.log(res, '--> Scraped text from https://github.com')
 
-      // var myobj = { name: "Company Inc", address: "Highway 37" };
+      // const myobj = { name: "Company Inc", address: "Highway 37" };
       // db.collection("customers").insertOne(myobj, function(err, res) {
       //     if (err) throw err;
       //     console.log("1 document inserted");
@@ -37,35 +38,22 @@ cron.schedule('* * * * *', function() {
       // });
     });
   });
-});
-
-//exceute every 1 min
-cron.schedule('*/1 * * * *', function() {
-  var shell = require('./child_helper');
-
-  var commandList = [
-    "node script1.js",
-    "node script2.js"
-  ]
-
-  shell.series(commandList, function(err) {
-    //    console.log('executed many commands in a row'); 
-    console.log('done')
+  scrape('https://www.npmjs.com/', '.title.em-default.type-neutral-11').then(res => {
+    console.log(res.trim(), '--> Scraped text from https://www.npmjs.com/')
   });
 });
 
-async function scrape(url, selector) {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
+//exceute every 1 min
+// cron.schedule('*/1 * * * *', function() {
+//   const shell = require('./scripts/run_multiple_scripts');
 
-  await page.setViewport({ width: 1025, height: 768 });
-  await page.goto(url);
-  //await page.screenshot({ path: 'screenshots/github.png' });
-  const scrapedText = await page.evaluate((selector) => {
-    return document.body.querySelector(selector).textContent
-  }, selector);
-  
-  browser.close();
+//   const commandList = [
+//     "node ./scripts/script1.js",
+//     "node ./scripts/script2.js"
+//   ]
 
-  return scrapedText;
-}
+//   shell.series(commandList, function(err) {
+//     if (err) throw err;
+//     console.log('done')
+//   });
+// });
