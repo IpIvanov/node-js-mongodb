@@ -31,12 +31,11 @@ app.get('/', function(request, response) {
     response.render('pages/index');
 });
 
-app.get('/daily-signs', function(request, response) {
+router.get('/signs', function(request, response) {
     MongoClient.connect(mongoURL, function(err, db) {
         if (err) throw err;
-        db.collection('daily-signs').find({}).toArray(function(err, result) {
+        db.collection('signs').find({}).toArray(function(err, result) {
             if (err) throw err;
-            console.log(result);
             response.json(result);
             db.close();
         });
@@ -52,28 +51,55 @@ cron.schedule('0 4 * * *', function() {
 
     MongoClient.connect(mongoURL, function(err, db) {
         if (err) throw err;
-        db.collection('daily-signs').remove();
+        db.collection('signs').remove();
+        db.createCollection('signs');
         db.close();
     });
 
-    let dailyHoroscopes = [];
     for (let i = 0; i < signs.length; i++) {
         let url = 'https://www.ganeshaspeaks.com/horoscopes/daily-horoscope/' + signs[i];
+        let info = '';
         request(url, function(err, resp, body) {
             if (err) throw err;
             $ = cheerio.load(body);
-            let info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
-            let key = signs[i];
+            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
             let obj = {};
-            obj[key] = info;
+            obj['name'] = signs[i];
+            obj['day'] = info;
 
-            // TODO: scraping goes here!
             MongoClient.connect(mongoURL, function(err, db) {
                 if (err) throw err;
-                db.createCollection('daily-signs');
-                db.collection('daily-signs').insertOne(obj, function(err, res) {
+                db.collection('signs').insertOne(obj, function(err, res) {
                     if (err) throw err;
                     db.close();
+                });
+            });
+        });
+
+        url = 'https://www.ganeshaspeaks.com/horoscopes/weekly-horoscope/' + signs[i];
+        request(url, function(err, resp, body) {
+            if (err) throw err;
+            $ = cheerio.load(body);
+            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
+
+            MongoClient.connect(mongoURL, function(err, db) {
+                if (err) throw err;
+                db.collection('signs').find().forEach(function(doc) {
+                    db.collection('signs').update({ _id: doc._id }, { $set: { 'week': info } });
+                });
+            });
+        });
+
+        url = 'https://www.ganeshaspeaks.com/horoscopes/monthly-horoscope/' + signs[i];
+        request(url, function(err, resp, body) {
+            if (err) throw err;
+            $ = cheerio.load(body);
+            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
+
+            MongoClient.connect(mongoURL, function(err, db) {
+                if (err) throw err;
+                db.collection('signs').find().forEach(function(doc) {
+                    db.collection('signs').update({ _id: doc._id }, { $set: { 'month': info } });
                 });
             });
         });
