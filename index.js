@@ -1,12 +1,23 @@
 const scrape = require('./scripts/scrape');
 const express = require('express');
 const app = express();
+const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const request = require('request');
 const cheerio = require('cheerio');
+const router = express.Router();
+
+// configure app to use bodyParser()
+// this will let us get the data from a POST
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use('/api', router);
+
 
 const MongoClient = require('mongodb').MongoClient;
 const mongoURL = "mongodb://herokuUser:user332211@ds117965.mlab.com:17965/heroku_jj0khzm2";
+
+// all of our routes will be prefixed with /api
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -20,28 +31,30 @@ app.get('/', function(request, response) {
     response.render('pages/index');
 });
 
+app.get('/daily-signs', function(request, response) {
+    MongoClient.connect(mongoURL, function(err, db) {
+        if (err) throw err;
+        db.collection('daily-signs').find({}).toArray(function(err, result) {
+            if (err) throw err;
+            console.log(result);
+            response.json(result);
+            db.close();
+        });
+    });
+});
+
 app.listen(app.get('port'), function() {
     console.log('Node app is running on port', app.get('port'));
 });
 
-cron.schedule('* * * * *', function() {
-    console.log('running a task every minute');
+cron.schedule('0 4 * * *', function() {
     const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
-    // scrape('https://github.com', 'h1.lh-condensed-ultra').then(res => {
-    //   MongoClient.connect(url, function(err, db) {
-    //     if (err) throw err;
-    //     console.log("Database created!");
-    //     console.log(res, '--> Scraped text from https://github.com')
 
-    //     const myobj = { name: "Company Inc", address: "Highway 37" };
-    //     db.collection("customers").insertOne(myobj, function(err, res) {
-    //         if (err) throw err;
-    //         console.log("1 document inserted");
-    //         db.close();
-    //     });
-    //   });
-    // });
-
+    MongoClient.connect(mongoURL, function(err, db) {
+        if (err) throw err;
+        db.collection('daily-signs').remove();
+        db.close();
+    });
 
     let dailyHoroscopes = [];
     for (let i = 0; i < signs.length; i++) {
@@ -54,32 +67,15 @@ cron.schedule('* * * * *', function() {
             let obj = {};
             obj[key] = info;
 
-            console.log(obj)
-                // TODO: scraping goes here!
+            // TODO: scraping goes here!
             MongoClient.connect(mongoURL, function(err, db) {
                 if (err) throw err;
-                console.log("Database created!");
-                db.collection("signs-daily").insertOne(obj, function(err, res) {
+                db.createCollection('daily-signs');
+                db.collection('daily-signs').insertOne(obj, function(err, res) {
                     if (err) throw err;
-                    console.log("1 document inserted");
                     db.close();
                 });
             });
         });
     }
 });
-
-//exceute every 1 min
-// cron.schedule('*/1 * * * *', function() {
-//   const shell = require('./scripts/run_multiple_scripts');
-
-//   const commandList = [
-//     "node ./scripts/script1.js",
-//     "node ./scripts/script2.js"
-//   ]
-
-//   shell.series(commandList, function(err) {
-//     if (err) throw err;
-//     console.log('done')
-//   });
-// });
