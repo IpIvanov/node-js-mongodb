@@ -47,8 +47,6 @@ app.listen(app.get('port'), function() {
 });
 
 cron.schedule('0 4 * * *', function() {
-    const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
-
     MongoClient.connect(mongoURL, function(err, db) {
         if (err) throw err;
         db.collection('signs').remove();
@@ -56,52 +54,75 @@ cron.schedule('0 4 * * *', function() {
         db.close();
     });
 
-    for (let i = 0; i < signs.length; i++) {
-        let url = 'https://www.ganeshaspeaks.com/horoscopes/daily-horoscope/' + signs[i];
-        let info = '';
-        request(url, function(err, resp, body) {
-            if (err) throw err;
-            $ = cheerio.load(body);
-            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
-            let obj = {};
-            obj['name'] = signs[i];
-            obj['day'] = info;
+    let urls = createURLs();
+    let pages = [...urls.dailyURLs, ...urls.weeklyURLs, ...urls.monthlyURLs];
+    let scrapers = pages.map(scraper);
 
-            MongoClient.connect(mongoURL, function(err, db) {
-                if (err) throw err;
-                db.collection('signs').insertOne(obj, function(err, res) {
-                    if (err) throw err;
+    Promise.all(scrapers).then(function(info) {
+        const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+        MongoClient.connect(mongoURL, function(err, db) {
+            for (let index = 0; index < pages.length; index++) {
+                if (pages.length === 33) {
+                    //close db if all the signs info is saved to the db
                     db.close();
-                });
-            });
+                    return;
+                }
+                if (index <= 11) {
+                    let obj = {};
+                    obj['name'] = signs[index];
+                    obj['day'] = info[index];
+
+                    db.collection('signs').insertOne(obj, function(err, res) {
+                        if (err) throw err;
+                    });
+                } else if (index > 11 && index <= 23) {
+                    db.collection('signs').find().forEach(function(doc) {
+                        db.collection('signs').update({ _id: doc._id }, { $set: { 'week': info[index] } });
+                    });
+                } else {
+                    db.collection('signs').find().forEach(function(doc) {
+                        db.collection('signs').update({ _id: doc._id }, { $set: { 'month': info[index] } });
+                    });
+                }
+            }
         });
 
-        url = 'https://www.ganeshaspeaks.com/horoscopes/weekly-horoscope/' + signs[i];
-        request(url, function(err, resp, body) {
-            if (err) throw err;
-            $ = cheerio.load(body);
-            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
 
-            MongoClient.connect(mongoURL, function(err, db) {
-                if (err) throw err;
-                db.collection('signs').find().forEach(function(doc) {
-                    db.collection('signs').update({ _id: doc._id }, { $set: { 'week': info } });
-                });
-            });
-        });
-
-        url = 'https://www.ganeshaspeaks.com/horoscopes/monthly-horoscope/' + signs[i];
-        request(url, function(err, resp, body) {
-            if (err) throw err;
-            $ = cheerio.load(body);
-            info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
-
-            MongoClient.connect(mongoURL, function(err, db) {
-                if (err) throw err;
-                db.collection('signs').find().forEach(function(doc) {
-                    db.collection('signs').update({ _id: doc._id }, { $set: { 'month': info } });
-                });
-            });
-        });
-    }
+    }, function(err) {
+        // At least one of request went wrong.
+        throw err;
+    });
 });
+
+function scraper(url) {
+    return new Promise(function(resolve, reject) {
+        request(url, function(err, resp, body) {
+            let $ = cheerio.load(body);
+            if (err) {
+                reject(err);
+            } else {
+                let info = $('#daily > div > div.col.m12.l9.padding-right-35.padding-right-sm-0 > div.row.margin-bottom-0 > p.margin-top-xs-0').text().trim()
+                resolve(info);
+            }
+        });
+    });
+}
+
+function createURLs() {
+    let obj = {
+        dailyURLs: [],
+        weeklyURLs: [],
+        monthlyURLs: []
+    };
+    const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+    signs.forEach((sign) => {
+        let day = 'https://www.ganeshaspeaks.com/horoscopes/daily-horoscope/' + sign;
+        obj['dailyURLs'].push(day);
+        let week = 'https://www.ganeshaspeaks.com/horoscopes/weekly-horoscope/' + sign;
+        obj['weeklyURLs'].push(week);
+        let month = 'https://www.ganeshaspeaks.com/horoscopes/monthly-horoscope/' + sign;
+        obj['monthlyURLs'].push(month);
+    });
+
+    return obj;
+}
