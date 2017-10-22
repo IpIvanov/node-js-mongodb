@@ -46,7 +46,7 @@ app.listen(app.get('port'), function() {
     console.log('Node app is running on port', app.get('port'));
 });
 
-cron.schedule('0 4 * * *', function() {
+cron.schedule('* * * * *', function() {
     MongoClient.connect(mongoURL, function(err, db) {
         if (err) throw err;
         db.collection('signs').remove();
@@ -62,7 +62,7 @@ cron.schedule('0 4 * * *', function() {
         const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
         MongoClient.connect(mongoURL, function(err, db) {
             for (let index = 0; index < pages.length; index++) {
-                if (pages.length === 33) {
+                if (index === 36) {
                     //close db if all the signs info is saved to the db
                     db.close();
                     return;
@@ -76,13 +76,13 @@ cron.schedule('0 4 * * *', function() {
                         if (err) throw err;
                     });
                 } else if (index > 11 && index <= 23) {
-                    db.collection('signs').find().forEach(function(doc) {
-                        db.collection('signs').update({ _id: doc._id }, { $set: { 'week': info[index] } });
-                    });
+                    let signsIndex = index - 12;
+
+                    db.collection('signs').update({ name: signs[signsIndex] }, { $set: { 'week': info[index] } });
                 } else {
-                    db.collection('signs').find().forEach(function(doc) {
-                        db.collection('signs').update({ _id: doc._id }, { $set: { 'month': info[index] } });
-                    });
+                    let signsIndex = index - 24;
+
+                    db.collection('signs').update({ name: signs[signsIndex] }, { $set: { 'month': info[index] } });
                 }
             }
         });
