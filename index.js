@@ -42,6 +42,19 @@ router.get('/signs', function(request, response) {
     });
 });
 
+router.post('/sign', function(request, response) {
+    let sign = request.body.sign;
+
+    MongoClient.connect(mongoURL, function(err, db) {
+        if (err) throw err;
+        db.collection('signs').findOne({ name: sign }, function(err, result) {
+            if (err) throw err;
+            response.json(result);
+            db.close();
+        });
+    });
+});
+
 app.listen(app.get('port'), function() {
     console.log('Node app is running on port', app.get('port'));
 });
