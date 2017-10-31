@@ -1,1 +1,0 @@
-console.log('executing script 1');
