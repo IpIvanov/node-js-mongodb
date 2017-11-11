@@ -32,8 +32,8 @@ scraper(url).then(
                 .collection('birthday-horoscope-today')
                 .insertOne(burthDayInfo, function(err, res) {
                     if (err) throw err;
-                    db.close();
                 });
+            db.close();
         });
     },
     function(err) {
