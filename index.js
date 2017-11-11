@@ -9,13 +9,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/api', router);
 
-
 const MongoClient = require('mongodb').MongoClient;
-const mongoURL = "mongodb://herokuUser:user332211@ds117965.mlab.com:17965/heroku_jj0khzm2";
+const mongoURL =
+    'mongodb://herokuUser:user332211@ds117965.mlab.com:17965/heroku_jj0khzm2';
 
 // all of our routes will be prefixed with /api
 
-app.set('port', (process.env.PORT || 5000));
+app.set('port', process.env.PORT || 5000);
 
 app.use(express.static(__dirname + '/public'));
 
@@ -30,11 +30,14 @@ app.get('/', function(request, response) {
 router.get('/signs', function(request, response) {
     MongoClient.connect(mongoURL, function(err, db) {
         if (err) throw err;
-        db.collection('signs').find({}).toArray(function(err, result) {
-            if (err) throw err;
-            response.json(result);
-            db.close();
-        });
+        db
+            .collection('signs')
+            .find({})
+            .toArray(function(err, result) {
+                if (err) throw err;
+                response.json(result);
+                db.close();
+            });
     });
 });
 
