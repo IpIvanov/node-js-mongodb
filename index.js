@@ -67,6 +67,17 @@ router.get('/birthday-horoscope', function(request, response) {
     });
 });
 
+router.get('/app-version', function(request, response) {
+    MongoClient.connect(mongoURL, function(err, db) {
+        if (err) throw err;
+        db.collection('app-version').findOne({}, function(err, result) {
+            if (err) throw err;
+            response.json(result);
+            db.close();
+        });
+    });
+});
+
 app.listen(app.get('port'), function() {
     console.log('Node app is running on port', app.get('port'));
 });

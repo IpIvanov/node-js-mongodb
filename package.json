@@ -10,7 +10,8 @@
         "start": "node index.js",
         "test": "node test.js",
         "get-signs": "node ./scripts/get_signs.js",
-        "get-birthday-horoscope": "node ./scripts/get_birthday_horoscope.js"
+        "get-birthday-horoscope": "node ./scripts/get_birthday_horoscope.js",
+        "get-app-version": "node ./scripts/get_app_version.js"
     },
     "dependencies": {
         "body-parser": "^1.18.2",
