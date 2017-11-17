@@ -43,8 +43,6 @@ scraper(url).then(
 );
 
 function scraper(url) {
-    const request = require('request');
-
     return new Promise(function(resolve, reject) {
         request(url, function(err, resp, body) {
             let $ = cheerio.load(body);
